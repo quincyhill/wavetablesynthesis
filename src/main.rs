@@ -1,3 +1,6 @@
+use std::time::Duration;
+use rodio::{OutputStream, Source};
+
 struct WaveTableOscillator {
     sample_rate: u32,
     wave_table: Vec<f32>,
@@ -35,6 +38,31 @@ impl WaveTableOscillator {
     }
 }
 
+impl Iterator for WaveTableOscillator {
+    type Item = f32;
+    fn next(&mut self) -> Option<f32> {
+        return Some(self.get_sample());
+    }
+}
+
+impl Source for WaveTableOscillator {
+    fn channels(&self) -> u16 {
+        return 1;
+    }
+
+    fn sample_rate(&self) -> u32 {
+        return  self.sample_rate;
+    }
+
+    fn current_frame_len(&self) -> Option<usize> {
+        return None;
+    }
+
+    fn total_duration(&self) -> Option<Duration> {
+        return None;
+    }
+}
+
 fn main() {
     let wave_table_size = 64;
     let mut wave_table: Vec<f32> = Vec::with_capacity(wave_table_size);
@@ -46,5 +74,12 @@ fn main() {
     }
 
     let mut oscillator = WaveTableOscillator::new(44100, wave_table);
-    oscillator.set_frequency(440.0)
+    oscillator.set_frequency(440.0);
+
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
+    // this convert samples is the issue
+    let _result = stream_handle.play_raw(oscillator.convert_samples());
+
+    std::thread::sleep(Duration::from_secs(5));
 }
